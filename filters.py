@@ -22,6 +22,9 @@ FILE_IDS = {
     "uber-raw-data-aug14.csv":          "1IWMQgs3vtjzEaU4RI_lONMhPFRGPmAZP",
     "uber-raw-data-sep14.csv":          "1TXjh6JV8M8xIoYgSa1jqK5q87YeK_kj8",
 
+    # ── Uber Jan-Jun 2015 ──
+    "uber-raw-data-janjune-15.csv":     "1PeFlACPt0TtKA73WiBgiTGZU1zUrXZ-R",
+
     # ── FOIL aggregate ──
     "Uber-Jan-Feb-FOIL.csv":            "1OjmkZu-fy6hxCRfNy6WebNK2vbpc6Rzf",
 
