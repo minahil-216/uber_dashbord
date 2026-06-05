@@ -83,6 +83,7 @@ def load_data(data_folder="data/"):
         glob.glob(os.path.join(data_folder, "uber-raw-data-aug14.csv")) +
         glob.glob(os.path.join(data_folder, "uber-raw-data-sep14.csv"))
     )
+    
 
     dfs = []
     for f in uber_files:
@@ -123,7 +124,7 @@ def load_foil(data_folder="data/"):
         return None
     df = pd.read_csv(path)
     df.columns = ["Base", "Date", "ActiveVehicles", "Trips"]
-    df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+    df["Date"] = pd.to_datetime(df["Date"], format="mixed", errors="coerce")  
     df.dropna(inplace=True)
     return df
 
