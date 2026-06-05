@@ -178,6 +178,7 @@ def plot_violin(df):
     fig, ax = plt.subplots(figsize=(9, 4))
     sns.violinplot(data=sample, x="DayName", y="Hour",
                    order=DAY_ORDER, ax=ax,
+                   hue="DayName", legend=False,
                    palette=["#e8533a","#e8533a","#3a7bd5","#3a7bd5","#e8533a","#4caf80","#4caf80"],
                    inner="quartile", linewidth=0.8, cut=0)
     ax.set_xlabel("Day of Week")

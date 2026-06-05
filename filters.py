@@ -83,7 +83,6 @@ def load_data(data_folder="data/"):
         glob.glob(os.path.join(data_folder, "uber-raw-data-aug14.csv")) +
         glob.glob(os.path.join(data_folder, "uber-raw-data-sep14.csv"))
     )
-    
 
     dfs = []
     for f in uber_files:
@@ -93,7 +92,7 @@ def load_data(data_folder="data/"):
         dfs.append(tmp)
 
     janjune = os.path.join(data_folder, "uber-raw-data-janjune-15.csv")
-    if False:
+    if os.path.exists(janjune):
         tmp = pd.read_csv(janjune, usecols=[0, 1, 2, 3], header=0, nrows=500000)
         tmp.columns = ["DateTime", "Lat", "Lon", "Base"]
         tmp["source"] = "uber_2015"
@@ -124,7 +123,7 @@ def load_foil(data_folder="data/"):
         return None
     df = pd.read_csv(path)
     df.columns = ["Base", "Date", "ActiveVehicles", "Trips"]
-    df["Date"] = pd.to_datetime(df["Date"], format="mixed", errors="coerce")  
+    df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
     df.dropna(inplace=True)
     return df
 
@@ -159,9 +158,7 @@ def load_other_bases(data_folder="data/"):
     if not dfs:
         return None
     df = pd.concat(dfs, ignore_index=True)
-    df["DateTime"] = pd.to_datetime(df["Date"].astype(str) + " " + df["Time"].astype(str), errors="coerce")
-    print("Columns:",df.columns.tolist())
-    print(df[["Date","Time"]].head(5))
+    df["DateTime"] = pd.to_datetime(df["Date"].astype(str) + " " + df["Time"].astype(str), format="mixed", errors="coerce")
     df.dropna(subset=["DateTime"], inplace=True)
     df["Hour"]    = df["DateTime"].dt.hour
     df["Month"]   = df["DateTime"].dt.month
