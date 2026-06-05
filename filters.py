@@ -159,6 +159,8 @@ def load_other_bases(data_folder="data/"):
         return None
     df = pd.concat(dfs, ignore_index=True)
     df["DateTime"] = pd.to_datetime(df["Date"].astype(str) + " " + df["Time"].astype(str), errors="coerce")
+    print("Columns:",df.columns.tolist())
+    print(df[["Date","Time"]].head(5))
     df.dropna(subset=["DateTime"], inplace=True)
     df["Hour"]    = df["DateTime"].dt.hour
     df["Month"]   = df["DateTime"].dt.month
