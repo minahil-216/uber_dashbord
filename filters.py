@@ -93,7 +93,8 @@ def load_data(data_folder="data/"):
 
     janjune = os.path.join(data_folder, "uber-raw-data-janjune-15.csv")
     if os.path.exists(janjune):
-        tmp = pd.read_csv(janjune, usecols=[0, 1, 2, 3], header=0, nrows=500000)
+        tmp = pd.read_csv(janjune, header=0, nrows=500000)
+        tmp = tmp.iloc[:, :4]
         tmp.columns = ["DateTime", "Lat", "Lon", "Base"]
         tmp["source"] = "uber_2015"
         dfs.append(tmp)
