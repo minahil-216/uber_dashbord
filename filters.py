@@ -1,184 +1,230 @@
-import pandas as pd
-import numpy as np
 import os
 import glob
-import requests
-
-# ─────────────────────────────────────────────────────────────────────────────
-# PASTE YOUR GOOGLE DRIVE FILE IDs BELOW
-#
-# How to get a File ID:
-#   1. Right-click the file in Google Drive → Share → Copy link
-#   2. Link looks like: https://drive.google.com/file/d/THIS_IS_THE_ID/view?usp=sharing
-#   3. Copy only the part between /d/ and /view  →  paste below
-# ─────────────────────────────────────────────────────────────────────────────
-
-FILE_IDS = {
-    # ── Main Uber raw pickups (2014) ──
-    "uber-raw-data-apr14.csv":          "1sCFKinh8ZkV1ilZqYO_pRnlOAFfaCz1J",
-    "uber-raw-data-may14.csv":          "14RnipKZ_lAnfk3OBFu9jWbPpVnb1acEi",
-    "uber-raw-data-jun14.csv":          "1K9SZ-2EGoaOpp5euOdtrz6e9iNKg9VhF",
-    "uber-raw-data-jul14.csv":          "1-Jha8FsxMhvHo93_SOl6KNkjdVmXkzcC",
-    "uber-raw-data-aug14.csv":          "1IWMQgs3vtjzEaU4RI_lONMhPFRGPmAZP",
-    "uber-raw-data-sep14.csv":          "1TXjh6JV8M8xIoYgSa1jqK5q87YeK_kj8",
-
-    # ── Uber Jan-Jun 2015 ──
-    "uber-raw-data-janjune-15.csv":     "1PeFlACPt0TtKA73WiBgiTGZU1zUrXZ-R",
-
-    # ── FOIL aggregate ──
-    "Uber-Jan-Feb-FOIL.csv":            "1OjmkZu-fy6hxCRfNy6WebNK2vbpc6Rzf",
-
-    # ── FHV summary ──
-    "other-FHV-services_jan-aug-2015.csv": "15nsxdRJl1MxBJO4B3i1L4yh7NmRGq1Dg",
-
-    # ── Other companies ──
-    "other-Skyline_B00111.csv":         "1ZwGOInM5mY94KnNfM4gAYo_2o_esmkDQ",
-    "other-Highclass_B01717.csv":       "1ZIe9WB7iiSS3QNXii68FvJDanxa8kBYE",
-    "other-Federal_02216.csv":          "1qjW3mSYJwU9-fwoinpMrMwOOT8l7gZuy",
-    "other-Carmel_B00256.csv":          "1HirbZK6Xnx8TVEJQX1S2jwFVN6IcLWwC",
-    "other-Firstclass_B01536.csv":      "1iVxII-2Rwjy1znYSnePlvvM_H7lWE5oQ",
-    "other-Prestige_B01338.csv":        "1jHEf_XzGc9qilsoYMp-CeMNtfuIK3MCl",
-    "other-American_B01362.csv":        "11iGIVvitI7Nzz6mxmUDP2rToTFfHOwWB",
-    "other-Lyft_B02510.csv":            "1L4PAeHUuH8NjQ_XaQgjjOZE64ynd5Nns",
-    "other-Dial7_B00887.csv":           "1g93dDORWvpDRyomZssTFBy65411CstN8",
-    "other-Diplo_B01196.csv":           "10c6SlgJzbDrRsXjNN7zLYVB3UDKEkx4t",
-}
-
-
-def download_from_drive(file_id: str, dest_path: str):
-    """Download a single file from Google Drive by file ID."""
-    url = f"https://drive.google.com/uc?export=download&id={file_id}&confirm=t"
-    print(f"  ⬇ Downloading {os.path.basename(dest_path)} ...")
-    with requests.get(url, stream=True, timeout=600) as r:
-        r.raise_for_status()
-        with open(dest_path, "wb") as f:
-            for chunk in r.iter_content(chunk_size=1024 * 1024):
-                f.write(chunk)
-    print(f"  ✓ Done: {os.path.basename(dest_path)}")
-
-
-def ensure_data_folder(data_folder: str = "data/"):
-    """Check every file — download from Drive if missing locally."""
-    os.makedirs(data_folder, exist_ok=True)
-    for filename, file_id in FILE_IDS.items():
-        dest = os.path.join(data_folder, filename)
-        if os.path.exists(dest):
-            print(f"  ✓ {filename} already exists, skipping.")
-            continue
-        if file_id == "PASTE_ID_HERE":
-            print(f"  ⚠️  {filename} — File ID not set, skipping.")
-            continue
-        download_from_drive(file_id, dest)
-
-
-def load_data(data_folder="data/"):
-    """Load all Uber raw pickup files and combine them."""
-    ensure_data_folder(data_folder)
-
-    uber_files = sorted(
-        glob.glob(os.path.join(data_folder, "uber-raw-data-apr14.csv")) +
-        glob.glob(os.path.join(data_folder, "uber-raw-data-may14.csv")) +
-        glob.glob(os.path.join(data_folder, "uber-raw-data-jun14.csv")) +
-        glob.glob(os.path.join(data_folder, "uber-raw-data-jul14.csv")) +
-        glob.glob(os.path.join(data_folder, "uber-raw-data-aug14.csv")) +
-        glob.glob(os.path.join(data_folder, "uber-raw-data-sep14.csv"))
-    )
-
-    dfs = []
-    for f in uber_files:
-        tmp = pd.read_csv(f)
-        tmp.columns = ["DateTime", "Lat", "Lon", "Base"]
-        tmp["source"] = "uber_2014"
-        dfs.append(tmp)
-
-    janjune = os.path.join(data_folder, "uber-raw-data-janjune-15.csv")
-    if False:
-        tmp = pd.read_csv(janjune, header=0, nrows=500000)
-        tmp = tmp.iloc[:, :4]
-        tmp.columns = ["DateTime", "Lat", "Lon", "Base"]
-        tmp["source"] = "uber_2015"
-        dfs.append(tmp)
-
-    df = pd.concat(dfs, ignore_index=True)
-
-    df["DateTime"] = pd.to_datetime(df["DateTime"], errors="coerce")
-    df.dropna(subset=["DateTime", "Lat", "Lon", "Base"], inplace=True)
-    df = df[(df["Lat"] > 40.4) & (df["Lat"] < 41.0)]
-    df = df[(df["Lon"] > -74.3) & (df["Lon"] < -73.6)]
-
-    df["Date"]    = df["DateTime"].dt.date
-    df["Month"]   = df["DateTime"].dt.month
-    df["Year"]    = df["DateTime"].dt.year
-    df["Hour"]    = df["DateTime"].dt.hour
-    df["Weekday"] = df["DateTime"].dt.weekday
-    day_names     = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-    df["DayName"] = df["Weekday"].map(lambda x: day_names[x])
-    df["Week"]    = df["DateTime"].dt.isocalendar().week.astype(int)
-
-    return df
-
-
-def load_foil(data_folder="data/"):
-    path = os.path.join(data_folder, "Uber-Jan-Feb-FOIL.csv")
-    if not os.path.exists(path):
-        return None
-    df = pd.read_csv(path)
-    df.columns = ["Base", "Date", "ActiveVehicles", "Trips"]
-    df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
-    df.dropna(inplace=True)
-    return df
-
-
-def load_fhv(data_folder="data/"):
-    path = os.path.join(data_folder, "other-FHV-services_jan-aug-2015.csv")
-    if not os.path.exists(path):
-        return None
-    df = pd.read_csv(path)
-    df.columns = ["BaseNumber", "BaseName", "PickupDate", "NumTrips", "NumVehicles"]
-    df["PickupDate"] = pd.to_datetime(df["PickupDate"], errors="coerce")
-    df["NumTrips"]    = pd.to_numeric(df["NumTrips"].astype(str).str.strip(), errors="coerce")
-    df["NumVehicles"] = pd.to_numeric(df["NumVehicles"].astype(str).str.strip(), errors="coerce")
-    df.dropna(inplace=True)
-    return df
-
-
-def load_other_bases(data_folder="data/"):
-    files = glob.glob(os.path.join(data_folder, "other-*.csv"))
-    files = [f for f in files if "FHV-services" not in f]
-
-    dfs = []
+import pandas as pd
+ 
+ 
+# ── Load main Uber raw data (2014 + 2015) ─────────────────────────────────────
+def load_data(data_dir: str) -> pd.DataFrame:
+    """
+    Loads all uber-raw-data-*.csv files from data_dir.
+    Expected columns (2014 format): Date/Time, Lat, Lon, Base
+    Also handles 2015 format:       Date/Time, Lat, Lon, Base, key, dispatching_base_num
+    """
+    pattern = os.path.join(data_dir, "uber-raw-data-*.csv")
+    files = sorted(glob.glob(pattern))
+ 
+    if not files:
+        raise FileNotFoundError(
+            f"No Uber raw data CSV files found in '{data_dir}'.\n"
+            "Expected files like: uber-raw-data-apr14.csv, uber-raw-data-sep14.csv …"
+        )
+ 
+    frames = []
     for f in files:
         try:
-            tmp = pd.read_csv(f, usecols=[0, 1, 2], header=0,
-                              names=["Date", "Time", "Address"], nrows=50000)
-            company = os.path.basename(f).replace("other-", "").split("_")[0]
-            tmp["Company"] = company
-            dfs.append(tmp)
-        except Exception:
-            pass
-    if not dfs:
-        return None
-    df = pd.concat(dfs, ignore_index=True)
-    df["DateTime"] = pd.to_datetime(df["Date"].astype(str) + " " + df["Time"].astype(str), format="mixed", errors="coerce")
-    df.dropna(subset=["DateTime"], inplace=True)
-    df["Hour"]    = df["DateTime"].dt.hour
-    df["Month"]   = df["DateTime"].dt.month
-    df["Weekday"] = df["DateTime"].dt.weekday
-    day_names     = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-    df["DayName"] = df["Weekday"].map(lambda x: day_names[x])
-    return df
-
-
-def apply_filters(df, months, base, hour_range, day, lat_range, year="All"):
-    out = df.copy()
-    if months:
-        out = out[out["Month"].isin(months)]
-    if base != "All":
-        out = out[out["Base"] == base]
-    out = out[(out["Hour"] >= hour_range[0]) & (out["Hour"] <= hour_range[1])]
-    if day != "All":
-        out = out[out["DayName"] == day]
-    out = out[(out["Lat"] >= lat_range[0]) & (out["Lat"] <= lat_range[1])]
-    if year != "All":
-        out = out[out["Year"] == int(year)]
-    return out
+            df = pd.read_csv(f, low_memory=False)
+            # Normalise column names
+            df.columns = df.columns.str.strip()
+ 
+            # Rename to standard names
+            rename_map = {}
+            for col in df.columns:
+                lc = col.lower().replace("/", "_").replace(" ", "_")
+                if lc in ("date_time", "datetime"):
+                    rename_map[col] = "DateTime"
+                elif lc == "lat":
+                    rename_map[col] = "Lat"
+                elif lc == "lon":
+                    rename_map[col] = "Lon"
+                elif lc == "base":
+                    rename_map[col] = "Base"
+            df.rename(columns=rename_map, inplace=True)
+ 
+            # Tag source file
+            df["source"] = os.path.basename(f).replace(".csv", "")
+            frames.append(df)
+        except Exception as e:
+            print(f"Warning: could not load {f}: {e}")
+ 
+    df_all = pd.concat(frames, ignore_index=True)
+ 
+    # Parse datetime
+    df_all["DateTime"] = pd.to_datetime(df_all["DateTime"], infer_datetime_format=True)
+ 
+    # Derived time columns
+    df_all["Hour"]    = df_all["DateTime"].dt.hour
+    df_all["Month"]   = df_all["DateTime"].dt.month
+    df_all["Year"]    = df_all["DateTime"].dt.year
+    df_all["DayName"] = df_all["DateTime"].dt.day_name()
+ 
+    # Ensure Lat/Lon are numeric
+    df_all["Lat"] = pd.to_numeric(df_all["Lat"], errors="coerce")
+    df_all["Lon"] = pd.to_numeric(df_all["Lon"], errors="coerce")
+ 
+    # Drop rows with missing critical fields
+    df_all.dropna(subset=["Lat", "Lon", "Hour", "Base"], inplace=True)
+ 
+    return df_all
+ 
+ 
+# ── Load FOIL aggregate data ───────────────────────────────────────────────────
+def load_foil(data_dir: str):
+    """
+    Loads Uber_Jan_Feb_FOIL.csv (or similar).
+    Expected columns: dispatching_base_number, date, active_vehicles, trips
+    """
+    candidates = [
+        "Uber_Jan_Feb_FOIL.csv",
+        "uber-trip-data-foil-jan-feb-2015.csv",
+        "uber_jan_feb_foil.csv",
+    ]
+    for name in candidates:
+        path = os.path.join(data_dir, name)
+        if os.path.exists(path):
+            df = pd.read_csv(path)
+            df.columns = df.columns.str.strip()
+ 
+            # Normalise column names
+            col_map = {}
+            for c in df.columns:
+                lc = c.lower().replace(" ", "_")
+                if "date" in lc:
+                    col_map[c] = "Date"
+                elif "active" in lc:
+                    col_map[c] = "ActiveVehicles"
+                elif "trip" in lc:
+                    col_map[c] = "Trips"
+                elif "base" in lc:
+                    col_map[c] = "Base"
+            df.rename(columns=col_map, inplace=True)
+ 
+            if "Date" in df.columns:
+                df["Date"] = pd.to_datetime(df["Date"], infer_datetime_format=True)
+ 
+            return df
+ 
+    # No file found — return None (app.py already guards with `if df_foil is not None`)
+    return None
+ 
+ 
+# ── Load FHV trip data ─────────────────────────────────────────────────────────
+def load_fhv(data_dir: str):
+    """
+    Loads FHV trip data (e.g. other-data-fhv-businesses-jan-aug-2015.csv).
+    Expected columns: Base Name, Base License Number, NumTrips (or Trips)
+    """
+    candidates = [
+        "other-data-fhv-businesses-jan-aug-2015.csv",
+        "fhv_trip_data_jan_aug_2015.csv",
+        "fhv-businesses.csv",
+    ]
+    for name in candidates:
+        path = os.path.join(data_dir, name)
+        if os.path.exists(path):
+            df = pd.read_csv(path)
+            df.columns = df.columns.str.strip()
+ 
+            col_map = {}
+            for c in df.columns:
+                lc = c.lower().replace(" ", "_")
+                if "base_name" in lc or "name" in lc:
+                    col_map[c] = "BaseName"
+                elif "license" in lc or "base_number" in lc or "base_license" in lc:
+                    col_map[c] = "BaseLicense"
+                elif "trip" in lc or "num_trips" in lc:
+                    col_map[c] = "NumTrips"
+            df.rename(columns=col_map, inplace=True)
+ 
+            if "NumTrips" in df.columns:
+                df["NumTrips"] = pd.to_numeric(df["NumTrips"], errors="coerce").fillna(0)
+ 
+            return df
+ 
+    return None
+ 
+ 
+# ── Load other FHV bases (Lyft, Carmel, Dial7, etc.) ─────────────────────────
+def load_other_bases(data_dir: str):
+    """
+    Loads other-data-lyft-carmel-dial7-ground-2015.csv or similar.
+    Expected columns: Company, Date/Time, Lat, Lon, Base
+    """
+    candidates = [
+        "other-data-lyft-carmel-dial7-ground-2015.csv",
+        "other_bases_2015.csv",
+        "lyft-carmel-dial7.csv",
+    ]
+    for name in candidates:
+        path = os.path.join(data_dir, name)
+        if os.path.exists(path):
+            df = pd.read_csv(path, low_memory=False)
+            df.columns = df.columns.str.strip()
+ 
+            col_map = {}
+            for c in df.columns:
+                lc = c.lower().replace("/", "_").replace(" ", "_")
+                if lc in ("date_time", "datetime", "pickup_date"):
+                    col_map[c] = "DateTime"
+                elif lc == "lat":
+                    col_map[c] = "Lat"
+                elif lc == "lon":
+                    col_map[c] = "Lon"
+                elif lc == "base":
+                    col_map[c] = "Base"
+                elif "company" in lc or "dispatching" in lc:
+                    col_map[c] = "Company"
+            df.rename(columns=col_map, inplace=True)
+ 
+            if "DateTime" in df.columns:
+                df["DateTime"] = pd.to_datetime(df["DateTime"], infer_datetime_format=True)
+                df["Hour"]    = df["DateTime"].dt.hour
+                df["DayName"] = df["DateTime"].dt.day_name()
+ 
+            # plot_count expects a "Base" column
+            if "Company" in df.columns and "Base" not in df.columns:
+                df["Base"] = df["Company"]
+ 
+            return df
+ 
+    return None
+ 
+ 
+# ── Apply sidebar filters ──────────────────────────────────────────────────────
+def apply_filters(
+    df: pd.DataFrame,
+    selected_months: list,
+    selected_base: str,
+    hour_range: tuple,
+    selected_day: str,
+    lat_range: tuple,
+    selected_year: str,
+) -> pd.DataFrame:
+    """
+    Filter the main dataframe according to sidebar selections.
+    All parameters match what app.py passes.
+    """
+    mask = pd.Series(True, index=df.index)
+ 
+    # Month filter
+    if selected_months:
+        mask &= df["Month"].isin(selected_months)
+ 
+    # Base filter
+    if selected_base != "All":
+        mask &= df["Base"] == selected_base
+ 
+    # Hour range filter
+    mask &= df["Hour"].between(hour_range[0], hour_range[1])
+ 
+    # Day of week filter
+    if selected_day != "All":
+        mask &= df["DayName"] == selected_day
+ 
+    # Latitude range filter
+    mask &= df["Lat"].between(lat_range[0], lat_range[1])
+ 
+    # Year filter
+    if selected_year != "All":
+        mask &= df["Year"] == int(selected_year)
+ 
+    return df[mask].copy()
