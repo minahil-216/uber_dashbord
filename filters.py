@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 
-
 def load_data(filepath: str) -> pd.DataFrame:
     df = pd.read_csv(filepath)
     df["Date/Time"] = pd.to_datetime(df["Date/Time"], errors="coerce")
@@ -18,8 +17,7 @@ def load_data(filepath: str) -> pd.DataFrame:
     df["Base"]       = df["Base"].astype(str).str.strip()
     return df.reset_index(drop=True)
 
-
-def apply_filters(df, date_range=None, bases=None, hour_range=(0, 23), days=None, search_text=""):
+def apply_filters(df, date_range=None, bases=None, hour_range=(0,23), days=None, search_text=""):
     filtered = df.copy()
     if date_range is not None and len(date_range) == 2:
         start, end = pd.Timestamp(date_range[0]), pd.Timestamp(date_range[1])
@@ -35,15 +33,3 @@ def apply_filters(df, date_range=None, bases=None, hour_range=(0, 23), days=None
         keyword = search_text.strip().lower()
         filtered = filtered[filtered["Base"].str.lower().str.contains(keyword, na=False)]
     return filtered.reset_index(drop=True)
-
-
-def get_kpis(df):
-    if len(df) == 0:
-        return {"total": 0, "peak_hour": "N/A", "peak_day": "N/A", "top_base": "N/A", "avg_hour": 0}
-    return {
-        "total":     len(df),
-        "peak_hour": df.groupby("Hour").size().idxmax(),
-        "peak_day":  df.groupby("DayOfWeek").size().idxmax(),
-        "top_base":  df["Base"].value_counts().idxmax(),
-        "avg_hour":  round(df["Hour"].mean(), 1),
-    }
