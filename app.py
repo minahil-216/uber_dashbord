@@ -43,7 +43,7 @@ def get_fhv():
 
 @st.cache_data
 def get_others():
-    return load_other_bases("data/")
+    return load_data("https://raw.githubusercontent.com/fivethirtyeight/uber-TLC-foil-response/master/uber-trip-data/uber-raw-data-apr14.csv")
 
 df_all    = get_all_data()
 df_foil   = get_foil()
